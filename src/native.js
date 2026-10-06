@@ -7,10 +7,13 @@
    leave the app, report photos that need the session, and the splash screen.
 
    __YU_API_ORIGIN__ is replaced at build time with the server the app talks to. */
+import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { KeychainAccess, SecureStorage } from '@aparajita/capacitor-secure-storage';
+// The tab bar's SF Symbols-style icons (native.css draws the rest of the iOS look)
+import './ios-icons.js';
 
 const API_ORIGIN = __YU_API_ORIGIN__;
 const TOKEN_KEY = 'session';
@@ -195,12 +198,19 @@ const TYPING_FIELD = 'textarea, [contenteditable="true"], input:not([type="check
 document.addEventListener('focusin', (e) => {
   if (e.target.matches && e.target.matches(TYPING_FIELD)) document.documentElement.classList.add('is-typing');
 });
+const stopTypingUnlessFocused = () => {
+  const el = document.activeElement;
+  if (!(el && el.isConnected && el.matches && el.matches(TYPING_FIELD))) document.documentElement.classList.remove('is-typing');
+};
+// A screen change removes the focused field without a focusout in WebKit (signing in replaces the
+// form with the dashboard), which would leave the tab bar hidden: every route change checks again
+window.addEventListener('hashchange', () => setTimeout(stopTypingUnlessFocused, 0));
+new MutationObserver(() => {
+  if (document.documentElement.classList.contains('is-typing')) stopTypingUnlessFocused();
+}).observe(document.getElementById('view') || document.body, { childList: true, subtree: true });
 document.addEventListener('focusout', () => {
   // Focus moving straight to the next field must not flash the tab bar in between
-  setTimeout(() => {
-    const el = document.activeElement;
-    if (!(el && el.matches && el.matches(TYPING_FIELD))) document.documentElement.classList.remove('is-typing');
-  }, 0);
+  setTimeout(stopTypingUnlessFocused, 0);
 });
 
 // ---- Updates. The app asks the server for the newest published build when it starts and whenever it
@@ -263,8 +273,12 @@ function whenPageDrawn(fn, tries = 80) {
   if (window.YU && window.YU.ui && window.YU.t && view && view.children.length) fn();
   else if (tries > 0) setTimeout(() => whenPageDrawn(fn, tries - 1), 250);
 }
-document.addEventListener('DOMContentLoaded', () => whenPageDrawn(() => setTimeout(checkForUpdate, 1500)));
-App.addListener('appStateChange', ({ isActive }) => { if (isActive) whenPageDrawn(checkForUpdate); }).catch((err) => report('app state not available', err));
+// Only the Android build is published on the server: on iOS the build number means something else and the
+// download is an APK, so the iPhone app never asks (its updates come through the App Store)
+if (Capacitor.getPlatform() === 'android') {
+  document.addEventListener('DOMContentLoaded', () => whenPageDrawn(() => setTimeout(checkForUpdate, 1500)));
+  App.addListener('appStateChange', ({ isActive }) => { if (isActive) whenPageDrawn(checkForUpdate); }).catch((err) => report('app state not available', err));
+}
 
 // ---- The native splash hands over to the page once it has drawn its first frame. The page's own
 // boot splash is the same blue, so the handover does not flash.

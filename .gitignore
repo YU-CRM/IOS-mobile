@@ -10,3 +10,6 @@ release/
 .env
 .env.*
 .DS_Store
+
+# Xcode build output
+build/

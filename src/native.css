@@ -1,15 +1,31 @@
-/* What makes the page feel like an app rather than a website in a frame: no grey flash on tap,
-   no long-press preview on links and photos, and no rubber-band overscroll showing the WebView
-   behind the page. Text in fields stays selectable. */
+/* The app's own layer over the website's styles: what makes the page feel like an iPhone app
+   rather than a website in a frame. scripts/build-web.mjs loads it after every website sheet,
+   so a rule here wins a tie with the one it restates. The website is untouched.
+
+   1. App basics      tap highlight, callouts, overscroll, the status-bar strip, keyboard
+   2. iOS tokens      system font and type scale, fills, separators, materials, tint
+   3. Type            large titles, sentence-case labels, SF Rounded numerals
+   4. Controls        buttons, fields, switch, segmented controls, chips
+   5. Lists           grouped rows with hairline separators
+   6. Layers          sheets from the bottom, glass menus, banner toasts
+   7. Chrome          the navigation bar and the Liquid Glass tab bar
+   8. iPhone sizes    SE and mini (375pt), Pro (393–402pt), Pro Max (430–440pt), short screens */
+
+/* ============ 1. App basics ============ */
+
+/* No grey flash on tap, no long-press preview on links and photos, and no rubber-band overscroll
+   showing the WebView behind the page. Text in fields stays selectable. */
 html { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
 a, img { -webkit-touch-callout: none; }
+/* Chrome text is not selectable in an iOS app; fields and long-form text are */
+.topbar, .tabbar, .btn, .tab, .seg, .filter-chip, .chip, .pill, .menu, .sheet, .icon-btn { -webkit-user-select: none; user-select: none; }
 
 /* The strip under the status bar: in a phone browser its toolbar covers it, the app draws there.
    Once the page scrolls, the strip takes the topbar's frosted ground so text never runs under
    the clock. It sits just below the topbar, which already covers it on the signed-in screens. */
 body::before {
   content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); z-index: 29;
-  background: var(--topbar-bg); backdrop-filter: blur(14px) saturate(1.2);
+  background: var(--topbar-bg); -webkit-backdrop-filter: var(--ios-blur); backdrop-filter: var(--ios-blur);
   opacity: 0; transition: opacity var(--dur) var(--ease); pointer-events: none;
 }
 html.has-scrolled body::before { opacity: 1; }
@@ -17,3 +33,387 @@ html.has-scrolled body::before { opacity: 1; }
 /* The app resizes for the keyboard, so the floating tab bar would sit on top of it; it steps
    aside while a text field has focus (src/native.js sets .is-typing). */
 html.is-typing .tabbar { display: none; }
+
+/* ============ 2. iOS tokens ============ */
+
+:root {
+  /* San Francisco on iPhone (SF Pro Text and Display switch by size on their own), Roboto on Android */
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, 'Golos Text', sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Golos Text', sans-serif;
+  --font-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* The iOS text styles, rounded to this layout: body 17, callout 16, subhead 15, footnote 13, caption 12 */
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-micro: 12px;
+  --fs-h3: 17px;
+  --fs-h2: 20px;
+  /* Large Title: 34pt on a 393pt phone, a step less on the 375pt ones, a step more on Pro Max */
+  --fs-h1: clamp(30px, 8.6vw, 36px);
+
+  /* Continuous-corner radii, a little rounder than the website's */
+  --r-hero: 32px;
+  --r-panel: 26px;
+  --r-card: 22px;
+  --r-inner: 16px;
+  --r-ctl: 12px;
+
+  /* The union blue is the app's tint, like the system blue in Apple's apps */
+  --tint: var(--blue);
+  /* System fills and separators (light), restated for dark below */
+  --ios-fill: rgba(118, 118, 128, .12);
+  --ios-fill-2: rgba(118, 118, 128, .16);
+  --ios-press: rgba(118, 118, 128, .14);
+  --ios-sep: rgba(60, 60, 67, .16);
+  --ios-placeholder: rgba(60, 60, 67, .3);
+  --ios-green: #34C759;
+  /* Materials: the frosted glass under bars, menus and sheets */
+  --ios-blur: blur(24px) saturate(1.8);
+  --glass-bar: rgba(255, 255, 255, .66);
+  --glass-bar-edge: rgba(255, 255, 255, .7);
+  --glass-menu: rgba(255, 255, 255, .94);
+  --glass-shadow: 0 10px 34px rgba(10, 25, 80, .2), 0 1px 3px rgba(10, 25, 80, .08);
+  --tab-ink: rgba(18, 39, 94, .78);
+  --seg-track: rgba(118, 118, 128, .12);
+  /* A segmented control on the blue ground: frosted white */
+  --seg-ground: rgba(255, 255, 255, .18);
+  --seg-thumb: #ffffff;
+  --seg-thumb-ink: var(--navy);
+  --nav-btn-bg: rgba(255, 255, 255, .18);
+  --nav-btn-line: rgba(255, 255, 255, .3);
+  --nav-sep: rgba(255, 255, 255, .22);
+  --tab-on: var(--blue);
+  --btn-tint: var(--blue);
+  --toast-bg: rgba(18, 39, 94, .9);
+  /* A field on the blue ground is plain white; on a light surface it is the system fill */
+  --field-bg: #ffffff;
+  --field-line: transparent;
+  --chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a94b8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 9 5-5 5 5M7 15l5 5 5-5'/%3E%3C/svg%3E");
+}
+.panel, .drawer, .modal, .menu, .popover, .sheet, .on-light, .task-card, .badge-tile, .login-card {
+  --field-bg: var(--ios-fill);
+  --seg-ground: var(--seg-track);
+}
+:root[data-theme="dark"] {
+  --ios-fill: rgba(118, 118, 128, .24);
+  --ios-fill-2: rgba(118, 118, 128, .32);
+  --ios-press: rgba(255, 255, 255, .08);
+  --ios-sep: rgba(84, 84, 88, .55);
+  --ios-placeholder: rgba(235, 235, 245, .3);
+  --ios-green: #30D158;
+  --glass-bar: rgba(30, 30, 32, .62);
+  --glass-bar-edge: rgba(255, 255, 255, .12);
+  --glass-menu: rgba(36, 36, 38, .94);
+  --glass-shadow: 0 10px 34px rgba(0, 0, 0, .5), 0 0 0 .5px rgba(255, 255, 255, .08);
+  --tab-ink: rgba(235, 235, 245, .7);
+  --seg-track: rgba(118, 118, 128, .24);
+  --seg-ground: rgba(118, 118, 128, .24);
+  --seg-thumb: #636366;
+  --seg-thumb-ink: #ffffff;
+  --nav-btn-bg: rgba(118, 118, 128, .24);
+  --nav-btn-line: rgba(255, 255, 255, .12);
+  --nav-sep: rgba(84, 84, 88, .55);
+  --tab-on: var(--blue-light);
+  --btn-tint: #5562E0;
+  --toast-bg: rgba(44, 44, 46, .92);
+  --field-bg: var(--ios-fill);
+  --chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 9 5-5 5 5M7 15l5 5 5-5'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ios-fill: rgba(118, 118, 128, .24);
+    --ios-fill-2: rgba(118, 118, 128, .32);
+    --ios-press: rgba(255, 255, 255, .08);
+    --ios-sep: rgba(84, 84, 88, .55);
+    --ios-placeholder: rgba(235, 235, 245, .3);
+    --ios-green: #30D158;
+    --glass-bar: rgba(30, 30, 32, .62);
+    --glass-bar-edge: rgba(255, 255, 255, .12);
+    --glass-menu: rgba(36, 36, 38, .94);
+    --glass-shadow: 0 10px 34px rgba(0, 0, 0, .5), 0 0 0 .5px rgba(255, 255, 255, .08);
+    --tab-ink: rgba(235, 235, 245, .7);
+    --seg-track: rgba(118, 118, 128, .24);
+    --seg-ground: rgba(118, 118, 128, .24);
+    --seg-thumb: #636366;
+    --seg-thumb-ink: #ffffff;
+    --nav-btn-bg: rgba(118, 118, 128, .24);
+    --nav-btn-line: rgba(255, 255, 255, .12);
+    --nav-sep: rgba(84, 84, 88, .55);
+    --tab-on: var(--blue-light);
+    --btn-tint: #5562E0;
+    --toast-bg: rgba(44, 44, 46, .92);
+    --field-bg: var(--ios-fill);
+    --chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 9 5-5 5 5M7 15l5 5 5-5'/%3E%3C/svg%3E");
+  }
+}
+
+body { letter-spacing: -.005em; }
+/* Icons at the weight of SF Symbols' Regular, a hair lighter than the website's */
+svg.lucide { stroke-width: 1.8; }
+.chip svg.lucide, .pill svg.lucide, .points svg.lucide, .sheet-check svg, .menu-check svg { stroke-width: 2.2; }
+
+/* ============ 3. Type ============ */
+
+/* Large Title: San Francisco Bold in sentence case. The accent word joins the title in the same face. */
+.h1 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-h1); line-height: 1.12; letter-spacing: -.012em; text-transform: none; }
+.h1 em, .accent { font-family: inherit; font-style: normal; font-weight: inherit; text-transform: none; letter-spacing: inherit; }
+.h2 { font-weight: 700; font-size: var(--fs-h2); line-height: 1.25; letter-spacing: -.01em; }
+.h3 { font-weight: 600; font-size: var(--fs-h3); line-height: 1.3; letter-spacing: -.01em; }
+.page-head { margin: 4px 0 20px; }
+.page-head .lead { font-size: 15px; color: var(--ink-3); margin-top: 6px; }
+
+/* Labels read as footnotes and section headers do on iOS: sentence case, no tracking */
+.eyebrow, .kpi-label, .hero-card .hero-label, .sheet-title, .sheet-group, .table th, .foot,
+.table.is-stack td[data-label]::before {
+  text-transform: none; letter-spacing: 0; font-weight: 600;
+}
+.eyebrow, .kpi-label, .hero-card .hero-label { font-size: 13px; }
+.eyebrow-pill { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; padding: 5px 12px; }
+.foot { font-size: 12px; }
+.menu-hint { letter-spacing: 0; }
+
+/* Numbers in SF Rounded, as in Fitness and Wallet */
+.display, .display-xl, .kpi-value, .dash-big, .mono-num, .points, .rank, .ring > span,
+.dash-progress-stat b, .stat .kpi-value {
+  font-family: var(--font-rounded); font-weight: 700; letter-spacing: -.01em;
+}
+
+/* ============ 4. Controls ============ */
+
+/* Capsule buttons at the 44pt touch target, in the semibold of a system button */
+.btn { height: 44px; padding: 0 20px; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.btn svg { width: 18px; height: 18px; }
+.btn-sm { height: 34px; padding: 0 14px; font-size: 14px; }
+.btn-sm svg { width: 15px; height: 15px; }
+.btn-lg { height: 52px; padding: 0 26px; font-size: 17px; }
+.btn-icon { width: 44px; padding: 0; }
+.btn-icon.btn-sm { width: 34px; }
+.btn-primary, .btn-dark, .btn-primary:hover, .btn-dark:hover { background: var(--btn-tint); color: #fff; }
+/* A press dims, as a UIButton does, instead of the website's ripple */
+.ripple { display: none; }
+.btn:active:not(:disabled):not([aria-disabled="true"]), .icon-btn:active, .filter-chip:active, .tab:active,
+.seg button:active, .set-option:active, .lang-switch:active, .me-pill:active { opacity: .7; }
+
+/* Round glass buttons, as in an iOS 26 navigation bar */
+.icon-btn { width: 44px; height: 44px; border: .5px solid var(--ctl-line); }
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn .badge-dot { top: 8px; right: 9px; width: 9px; height: 9px; background: #FF3B30; box-shadow: 0 0 0 2px var(--paper); }
+
+/* Fields: borderless, the system fill on light surfaces, 17pt text (which also keeps iOS from zooming) */
+.input, .select, .textarea {
+  height: 44px; border-radius: var(--r-ctl); font-size: 17px; letter-spacing: -.02em;
+  background-color: var(--field-bg); border: 1px solid var(--field-line);
+}
+.textarea { height: auto; }
+.input::placeholder, .textarea::placeholder { color: var(--ios-placeholder); }
+.input:hover, .select:hover, .textarea:hover { border-color: var(--field-line); }
+.input:focus, .select:focus, .textarea:focus { border-color: var(--tint); box-shadow: 0 0 0 3px var(--cobalt-ring); }
+.input.is-invalid, .textarea.is-invalid, .select.is-invalid { border-color: var(--bad); }
+.select { background-image: var(--chevrons); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 36px; }
+.input-sm, .select-sm { height: 36px; font-size: 15px; border-radius: 10px; }
+.field > label, .label { font-size: 13px; font-weight: 600; color: var(--ink-3); padding-left: 4px; }
+.search svg { width: 17px; height: 17px; left: 12px; }
+.search .input { padding-left: 38px; }
+.check input { width: 22px; height: 22px; accent-color: var(--tint); }
+
+/* The UISwitch: 51 by 31, green when on */
+.switch { width: 51px; height: 31px; background: var(--ios-fill-2); }
+.switch::after { top: 2px; left: 2px; width: 27px; height: 27px; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06); transition: transform var(--dur-slow) var(--ease-out); }
+.switch.is-on { background: var(--ios-green); }
+.switch.is-on::after { transform: translateX(20px); }
+
+/* Segmented controls: a sunk track and a lifted white thumb */
+.tabs, .seg { padding: 2px; gap: 0; border: 0; background: var(--seg-ground); }
+.tab, .seg button { font-size: 14px; font-weight: 500; color: var(--ink); }
+.tab { padding: 7px 14px; }
+.seg button { height: 30px; padding: 0 14px; }
+.tab.is-active, .seg button.is-active { font-weight: 600; background: var(--seg-thumb); color: var(--seg-thumb-ink); box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); }
+.tab .count { font-weight: 600; }
+
+.filter-chip { height: 34px; font-size: 14px; font-weight: 500; border: 0; }
+.filter-chip.is-active { font-weight: 600; }
+.chip, .pill { font-weight: 600; font-size: 12px; }
+.points { font-size: 14px; }
+
+/* ============ 5. Lists ============ */
+
+/* Rows on a white card are an iOS grouped list: no boxes, a hairline between rows,
+   the row highlighting while it is pressed */
+:is(.panel, .drawer, .modal, .on-light) .list { gap: 0; }
+:is(.panel, .drawer, .modal, .on-light) .list-item { border: 0; border-radius: 14px; padding: 12px 10px; margin: 0 -10px; }
+:is(.panel, .drawer, .modal, .on-light) .list-item + .list-item { box-shadow: inset 0 .5px 0 var(--ios-sep); border-radius: 0; }
+:is(.panel, .drawer, .modal, .on-light) .list-item.is-me { border-radius: 14px; box-shadow: none; }
+:is(.panel, .drawer, .modal, .on-light) .list-item.is-me + .list-item { box-shadow: none; }
+.list-item.is-link:active { transform: none; background: var(--ios-press); }
+.list-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.list-sub { font-size: 13px; }
+.divider { height: .5px; background: var(--ios-sep); }
+.panel-foot, .drawer-head, .drawer-foot, .tr-panel { border-color: var(--ios-sep); border-width: .5px; }
+.table td { border-bottom: .5px solid var(--ios-sep); }
+
+/* Choice rows (settings): a list row with a tinted checkmark, no outline box */
+.set-option { border: 0; background: var(--ios-fill); }
+.set-option.is-active { background: var(--blue-soft); box-shadow: inset 0 0 0 1.5px var(--tint); }
+.set-option-label { font-weight: 600; font-size: 16px; }
+.set-option-hint { font-size: 13px; }
+
+/* ============ 6. Layers ============ */
+
+.scrim, .sheet-backdrop { background: rgba(0, 0, 0, .32); -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* Context menus and popovers: frosted glass, 17pt rows, the icon at the trailing edge */
+.menu, .popover {
+  background: var(--glass-menu); -webkit-backdrop-filter: var(--ios-blur); backdrop-filter: var(--ios-blur);
+  box-shadow: var(--glass-shadow); border-radius: 22px;
+}
+.menu { min-width: 240px; padding: 6px; }
+.menu-item { font-size: 16px; font-weight: 400; color: var(--layer-ink); padding: 11px 14px; border-radius: 14px; }
+.menu-item svg { order: 3; width: 19px; height: 19px; color: inherit; }
+.menu-item .menu-check { order: -1; }
+.menu-item:hover, .menu-item:focus-visible { background: var(--ios-press); }
+.menu-item.is-danger, .menu-item.is-danger svg { color: #FF3B30; }
+.menu-sep { height: 6px; margin: 4px -6px; background: var(--ios-press); }
+
+/* Toasts drop in from the top like a notification banner, clear of the Dynamic Island */
+.toasts { top: calc(var(--safe-top) + 8px); bottom: auto !important; width: min(520px, calc(100vw - 32px)); align-items: center; }
+.toast { max-width: 100%; }
+.toast {
+  background: var(--toast-bg); -webkit-backdrop-filter: var(--ios-blur); backdrop-filter: var(--ios-blur);
+  font-size: 15px; font-weight: 600; padding: 12px 20px 12px 14px; animation: ios-banner-in var(--dur-slow) var(--ease-spring);
+}
+.toast svg { width: 22px; height: 22px; }
+@keyframes ios-banner-in { from { opacity: 0; transform: translateY(-24px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* The picker: an iOS sheet with its grabber, a centred title and a tinted checkmark */
+.sheet { border-radius: 34px; }
+.sheet-grip { width: 36px; height: 5px; background: rgba(127, 127, 127, .4); margin-top: 6px; }
+.sheet-title { text-align: center; font-size: 13px; color: var(--ink-3); padding: 10px 24px 8px; }
+.sheet-group { font-size: 13px; color: var(--ink-3); }
+.sheet-option { font-size: 17px; font-weight: 400; color: var(--layer-ink); min-height: 50px; border-radius: 14px; }
+.sheet-option:active, .sheet-option:focus-visible { background: var(--ios-press); }
+.sheet-option.is-selected { background: transparent; font-weight: 600; }
+.sheet-option.is-selected .sheet-check { background: none; color: var(--tint); }
+.sheet-check svg { width: 20px; height: 20px; }
+
+/* ============ 7. Chrome and phone layers ============ */
+@media (max-width: 900px) {
+  /* Margins: 16pt on the 375–402pt phones, 20pt on Pro Max, as UIKit's readable margins */
+  :root { --gutter: clamp(16px, 4.6vw, 20px); --gap: 12px; --topbar-h: 52px; }
+
+  /* The navigation bar: a 44pt row under the status bar, frosted, with a hairline once content runs under it */
+  .topbar {
+    padding: calc(var(--safe-top) + 4px) var(--gutter) 4px;
+    -webkit-backdrop-filter: var(--ios-blur); backdrop-filter: var(--ios-blur);
+  }
+  .topbar.is-scrolled { box-shadow: 0 .5px 0 var(--nav-sep); }
+  .topbar .logo { font-size: 21px; }
+  .topbar .icon-btn { width: 40px; height: 40px; background: var(--nav-btn-bg); border-color: var(--nav-btn-line); }
+
+  /* The tab bar: an iOS 26 Liquid Glass capsule floating over the content, just above the home indicator */
+  .tabbar {
+    left: calc(var(--gutter) + var(--safe-left)); right: calc(var(--gutter) + var(--safe-right));
+    bottom: max(10px, calc(var(--safe-bottom) - 12px));
+    padding: 4px; gap: 0;
+    background: var(--glass-bar); border: .5px solid var(--glass-bar-edge);
+    -webkit-backdrop-filter: var(--ios-blur); backdrop-filter: var(--ios-blur);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, .35);
+  }
+  .tab-item {
+    gap: 1px; padding: 6px 0 5px; min-height: 54px; justify-content: center;
+    font-size: 10px; font-weight: 600; letter-spacing: .01em; color: var(--tab-ink);
+  }
+  .tab-item > span:not(.sf-icon):not(.avatar) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .tab-item.is-active { color: var(--tab-on); background: var(--ios-press); }
+  .tab-marker { top: 4px; bottom: 4px; background: var(--ios-press); }
+  /* SF-style icons (src/ios-icons.js): the outline at rest, the fill for the tab you are on */
+  .sf-icon { display: grid; width: 28px; height: 28px; }
+  .sf-icon .sf { grid-area: 1 / 1; width: 28px; height: 28px; transition: opacity var(--dur) var(--ease); }
+  .sf-icon .sf-fill, .tab-item.is-active .sf-icon .sf-line { opacity: 0; }
+  .tab-item.is-active .sf-icon .sf-fill { opacity: 1; }
+  .tab-item svg, .tab-item .avatar, .tab-item.is-active svg, .tab-item.is-active .avatar { transform: none; }
+  .tab-item .sf-icon { transition: transform var(--dur-slow) var(--ease-spring); }
+  .tab-item:active .sf-icon, .tab-item:active .avatar { transform: scale(.88); transition-duration: 90ms; }
+  .tab-me .avatar { --size: 30px; transition: box-shadow var(--dur) var(--ease), transform var(--dur-slow) var(--ease-spring); }
+  .tab-me.is-active .avatar { box-shadow: 0 0 0 2px var(--layer-bg), 0 0 0 4px var(--tint); }
+  /* The avatar's ring marks the profile tab; the glass lozenge would mark it twice */
+  .tabbar .tab-me.is-active { background: transparent; }
+  .tabbar:has(.tab-me.is-active) .tab-marker { opacity: 0; }
+
+  /* The content clears the tab bar and the home indicator, not a fixed guess */
+  .view { padding-bottom: calc(max(10px, var(--safe-bottom) - 12px) + 64px + 28px); }
+  .foot { padding-bottom: calc(max(10px, var(--safe-bottom) - 12px) + 64px + 20px); }
+
+  /* Modals and drawers become iOS sheets: they rise from the bottom edge, rounded at the top,
+     and keep their last row clear of the home indicator */
+  .modal-wrap { place-items: end stretch; padding: calc(var(--safe-top) + 12px) 0 0; }
+  .modal, .modal.is-wide {
+    width: 100%; border-radius: var(--r-hero) var(--r-hero) 0 0;
+    max-height: calc(100vh - var(--safe-top) - 12px);
+    transform: translateY(100%); opacity: 1; transition: transform var(--dur-slow) var(--ease-out);
+  }
+  .modal.is-open { transform: none; }
+  .modal > :last-child { padding-bottom: calc(20px + var(--safe-bottom)); }
+  .modal-foot .btn, .drawer-foot .btn { flex: 1 1 auto; }
+  .drawer {
+    top: calc(var(--safe-top) + 12px); left: 0; right: 0; bottom: 0; width: auto;
+    border-radius: var(--r-hero) var(--r-hero) 0 0;
+    transform: translateY(calc(100% + 24px)); transition: transform var(--dur-slow) var(--ease-out);
+  }
+  .drawer.is-open { transform: none; }
+  .drawer > :last-child { padding-bottom: calc(16px + var(--safe-bottom)); }
+  /* The sheet's grabber, so the layer reads as one that came up from below */
+  .modal::before, .drawer::before { content: ''; flex: none; width: 36px; height: 5px; border-radius: 999px; background: rgba(127, 127, 127, .4); margin: 8px auto 0; }
+
+  /* The notifications panel is a glass card under the navigation bar */
+  .topbar .popover { left: calc(var(--gutter) + var(--safe-left)); right: calc(var(--gutter) + var(--safe-right)); top: calc(var(--topbar-h) + var(--safe-top) + 6px); border-radius: 26px; }
+
+  /* Dashboard: the greeting reads as a large title rather than a poster */
+  .dash-title { font-size: clamp(32px, 9vw, 40px); line-height: 1.08; letter-spacing: -.02em; }
+  .dash-hero .eyebrow-pill { font-size: 12px; }
+  .dash-hero-actions .btn { height: 50px; font-size: 17px; }
+  .dash-earning { font-size: 13px; }
+
+  /* Sign-in: a large title and a card that reads as an inset grouped form */
+  .login-title { font-size: clamp(34px, 10vw, 44px); line-height: 1.08; letter-spacing: -.02em; }
+  .login-page { padding-left: var(--gutter); padding-right: var(--gutter); }
+  .login-card { border-radius: var(--r-hero); }
+  .login-card-title { font-size: 22px; font-weight: 700; }
+  .lang-float { top: calc(var(--safe-top) + 6px); right: var(--gutter); }
+
+  .kpi-row .kpi-label, .dash-tile .kpi-label { font-size: 12px; letter-spacing: 0; }
+
+  /* Missions filters: the sort menu and the free-seats switch share a row while both fit, otherwise
+     each takes the full width, so the sort label is never cut to its first word */
+  .tasks-filters .select { flex: 1 1 150px; min-width: 0; width: auto; }
+  .tasks-filters > .filter-chip { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ============ 8. iPhone sizes ============ */
+
+/* SE, 12/13 mini (375pt): the tightest row of five tabs and the narrowest titles */
+@media (max-width: 380px) {
+  .tab-item { font-size: 9.5px; letter-spacing: 0; }
+  .sf-icon, .sf-icon .sf { width: 26px; height: 26px; }
+  .btn { padding: 0 16px; }
+  .filter-chip { padding: 0 12px; font-size: 13.5px; }
+  .tab, .seg button { padding-left: 11px; padding-right: 11px; font-size: 13.5px; }
+  .dash-progress-stat b { font-size: 18px; }
+}
+
+/* Pro Max and Plus (430pt and up): more air, the type a step larger */
+@media (min-width: 428px) and (max-width: 900px) {
+  .tab-item { font-size: 10.5px; }
+  .panel-pad, .panel-body { padding: 22px; }
+  .list-title { font-size: 17px; }
+}
+
+/* Short screens (iPhone SE and the older 4.7" phones, 667pt tall, no home indicator):
+   the bar sits lower and slimmer, titles give back some height */
+@media (max-height: 700px) and (max-width: 900px) {
+  :root { --fs-h1: clamp(28px, 8vw, 32px); }
+  .tabbar { padding: 3px; }
+  .tab-item { min-height: 48px; padding: 4px 0 3px; }
+  .view { padding-bottom: calc(max(10px, var(--safe-bottom) - 12px) + 56px + 24px); }
+  .dash-title { font-size: clamp(28px, 8.4vw, 34px); }
+  .page-head { margin: 2px 0 14px; }
+}

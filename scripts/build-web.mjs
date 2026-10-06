@@ -4,7 +4,8 @@
 //   assets/native.<hash>.js   — Capacitor and src/native.js, bundled by esbuild, with the server address baked in
 //   assets/native.<hash>.css  — src/native.css
 //   a Content-Security-Policy meta tag that allows exactly that server (the website gets its CSP as a header)
-//   viewport-fit=cover, so the page draws under the status bar and home indicator (the CSS pads for them)
+//   viewport-fit=cover, so the page draws under the status bar and home indicator (the CSS pads for them),
+//   and no zoom, as in a native app
 //
 // Usage:
 //   YU_API_ORIGIN=https://yu.example.uz node scripts/build-web.mjs    release: the production server, https only
@@ -82,7 +83,8 @@ writeFileSync(join(www, 'assets', names.css), css);
 
 let html = readFileSync(join(www, 'index.html'), 'utf8');
 html = replaceOnce(html, '<meta name="viewport" content="width=device-width, initial-scale=1">',
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">', 'the viewport meta tag');
+  // No zoom in the app: iOS would otherwise zoom in on every field under 16px when it takes focus
+  '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">', 'the viewport meta tag');
 html = replaceOnce(html, '<meta charset="utf-8">',
   `<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy(origin)}">`, 'the charset meta tag');
 // Deferred scripts run in document order: the glue goes first so window.YUNative is there before the app boots
